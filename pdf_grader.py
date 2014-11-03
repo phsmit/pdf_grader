@@ -61,7 +61,7 @@ def read_data(filename):
                 student_data['EmailSent'] = bool(sent)
             else:
                 question, points, description = line.split(':')
-                student_data[question] = (int(points) if len(points) > 0 else None, description.replace(r"\n", "\r\n"))
+                student_data[question] = (float(points) if len(points) > 0 else None, description.replace(r"\n", "\r\n"))
 
     return general, students
 
