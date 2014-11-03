@@ -57,7 +57,7 @@ def download_files(imap_label, pdf_directory, file_regex, settings):
         if message.is_multipart():
             for part in message.get_payload():
                 if part.get_content_type() == 'application/pdf':
-                    fn = part.get_filename()
+                    fn = part.get_filename().upper()
                     m = file_regex.match(fn)
                     if not m:
                         print("Invalid filename for pdf in message from {}".format(message['From']))

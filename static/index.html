@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Index</title>
+    <style type="text/css">
+
+        body {
+            margin: 0;
+            padding-left: 600px; /* LC fullwidth */
+            padding-right: 110px; /* RC fullwidth + CC padding */
+            min-width: 640px; /* LC fullwidth + CC padding */
+        }
+
+        #header, #footer {
+            margin-left: -600px; /* LC fullwidth */
+            margin-right: -110px; /* RC fullwidth + CC padding */
+        }
+
+        .column {
+            position: relative;
+            float: left;
+        }
+
+        #center {
+            padding: 0 20px;
+            width: 100%;
+        }
+
+        #left {
+            width: 580px; /* LC width */
+            padding: 0 10px; /* LC padding */
+            right: 640px; /* LC fullwidth + CC padding */
+            margin-left: -100%;
+        }
+
+        #right {
+            width: 50px; /* RC width */
+            padding: 0 10px; /* RC padding */
+            margin-right: -100%;
+        }
+
+        #footer {
+            clear: both;
+        }
+
+        /*** IE Fix ***/
+        * html #left {
+            left: 70px; /* RC fullwidth */
+        }
+
+        /*** Just for Looks ***/
+
+        body {
+            background: #FFF;
+        }
+
+        #header, #footer {
+            font-size: large;
+            text-align: center;
+            padding: 0.3em 0;
+            background: #999;
+        }
+
+        #left {
+            background: #66F;
+        }
+
+        #center {
+            background: #DDD;
+        }
+
+        #right {
+            /*background: #F66;*/
+        }
+
+        .column {
+            padding-top: 1em;
+            text-align: justify;
+        }
+
+    </style>
+    <script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script>
+        function select_student() {
+            var $spicker = $("#studentpicker");
+            console.log($spicker.val());
+            $("#pdfdoc").attr('data', 'pdf/ex1_' + $spicker.val() + '.pdf');
+
+            var $form = $("#gradingform");
+            submit_form();
+
+            $.getJSON('student/' + $spicker.val(), function (resp) {
+                console.log(resp);
+
+                $form.attr({
+                    action: 'student/' + $spicker.val(),
+                    method: 'post'
+                });
+                $form.empty();
+                var $disabled = resp.EmailSent;
+                $.each(window.global_info.Questions, function (idx, question) {
+                    $form.append($("<h3>").text(question));
+                    $form.append($("<input>").attr({
+                        id: question + "_points",
+                        name: question + "_points",
+                        type: "number",
+                        value: (question in resp ? resp[question][0] : "")
+                    }));
+                    $form.append($("<span>").text(window.global_info.MaxPoints[idx] != null ? "Max " + window.global_info.MaxPoints[idx] + " points" : ""));
+                    $form.append($("<br>"));
+                    $form.append($("<textarea>").attr({
+                        id: question + "_desc",
+                        name: question + "_desc",
+                        rows: 3,
+                        cols: 50
+                    }).text(question in resp ? resp[question][1] : ""));
+                    $form.append($("<br>"));
+                });
+            });
+
+        }
+
+        function submit_form() {
+            var $form = $("#gradingform");
+            {
+                $.post($form.attr('action'), $form.serialize(), function (response) {
+                    console.log("form saved manually");
+                }, 'json');
+                return false;
+            }
+        }
+
+        $(document).ready(function () {
+            console.log("ready!");
+            $.getJSON('info', function (resp) {
+                console.log(resp);
+                window.global_info = resp;
+                $("#exercisename").text(resp.Title);
+
+                var $spicker = $("#studentpicker");
+                $spicker.empty();
+                $.each(resp.StudentList, function (idx, student) {
+                    $spicker.append($("<option>").text(student).attr({
+                        value: student,
+                        selected: idx == 0
+                    }));
+                });
+
+                $spicker.change(select_student).change();
+
+            });
+
+            $("#save").click(function () {
+                submit_form();
+                $.get('save');
+            })
+        });
+
+    </script>
+</head>
+<body>
+<div id="header">PDF Grader - <span id="exercisename"></span></div>
+
+<div id="center" class="column">
+
+    <object id='pdfdoc' data="" type="application/pdf" width="100%"
+            height="1000"><p>It appears you don't have a PDF plugin for this
+        browser. No biggie... you can click here
+            to download the PDF file.</p></object>
+
+
+</div>
+<div id="left" class="column">
+    <h2>Select Student</h2>
+    <select id='studentpicker' size="5">
+    </select>
+
+    <h2>Grading</h2>
+
+    <form id="gradingform">
+        <h3>Q1</h3>
+        <input type="text"/> Max 4 <br/>
+        <textarea rows="4" cols="50"></textarea>
+    </form>
+
+</div>
+
+<div id="right" class="column">
+    <button id="save"><img
+            src="http://icons.iconarchive.com/icons/visualpharm/must-have/256/Save-icon.png"
+            width="50px"/></button>
+
+
+</div>
+
+<div id="footer">Made by Peter Smit, 2014.</div>
+</body>
+</html>
