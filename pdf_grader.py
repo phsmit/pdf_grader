@@ -109,13 +109,11 @@ if __name__ == "__main__":
     parser = ArgumentParser(description='Start grading session')
     parser.add_argument("grading_data_file")
     parser.add_argument("pdf_directory")
-    parser.add_argument("student_email_list")
     parser.add_argument("pdf_regex", default=None, nargs='?')
 
     args = parser.parse_args()
 
     pdf_directory = args.pdf_directory
-    # email_dict = read_student_email_list(args.student_email_list)
     general_data, student_data = read_data(args.grading_data_file)
     grading_data_file = args.grading_data_file
 
