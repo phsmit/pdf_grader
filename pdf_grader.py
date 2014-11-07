@@ -1,8 +1,13 @@
 from argparse import ArgumentParser
+import filecmp
+import datetime
+import shutil
+import os
 from os import listdir
 from collections import OrderedDict
 from bottle import Bottle, run, static_file, debug, request
 import re
+import tempfile
 
 debug(True)
 
@@ -17,6 +22,13 @@ student_data = {}
 grading_data_file = None
 
 
+def num(s):
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
+
+
 def find_valid_students(pdf_directory, pdf_regex):
     if type(pdf_regex) == str:
         pdf_regex = re.compile(pdf_regex)
@@ -27,7 +39,9 @@ def find_valid_students(pdf_directory, pdf_regex):
 
 
 def write_data(general, students, filename):
-    with open(filename, 'w') as f:
+    tmpfile = tempfile.mktemp()
+
+    with open(tmpfile, 'w') as f:
         print(general['Title'], file=f)
         print(",".join(general['Questions']), file=f)
         print(",".join(str(i) if i is not None else "" for i in general['MaxPoints']), file=f)
@@ -38,6 +52,10 @@ def write_data(general, students, filename):
                 if k.startswith("EmailSent"):
                     continue
                 print("{}:{}:{}".format(k,str(v[0]) if v[0] is not None else "", v[1].replace("\r\n",r"\n")),file=f)
+
+    if not filecmp.cmp(tmpfile, filename):
+        shutil.move(filename, ".{}.{}".format(filename, datetime.datetime.now().isoformat()))
+        shutil.move(tmpfile, filename)
 
 
 def read_data(filename):
@@ -57,13 +75,17 @@ def read_data(filename):
                 if student_id is not None:
                     students[student_id] = student_data
                     student_data = OrderedDict()
-                _, student_id, sent = line.split(':')
-                student_data['EmailSent'] = bool(sent)
+                _, student_id, sent = line.strip().split(':')
+                student_data['EmailSent'] = (sent != "False")
             else:
-                question, points, description = line.split(':')
-                student_data[question] = (float(points) if len(points) > 0 else None, description.replace(r"\n", "\r\n"))
+                question, points, description = line.strip().split(':', 2)
+                student_data[question] = (num(points) if len(points) > 0 else None, description.replace(r"\n", "\r\n"))
+
+        if student_id is not None:
+            students[student_id] = student_data
 
     return general, students
+
 
 @grader.route('/')
 def indexpage():
@@ -87,10 +109,12 @@ def poststudentdata(studentid):
 
         if len(points) > 0 or len(desc):
             try:
-                points = float(points)
+                points = num(points)
             except ValueError:
                 points = None
             student_data[studentid][key] = (points, desc)
+
+    write_data(general_data, student_data, grading_data_file)
 
 @grader.route('/info')
 def getinfo():
