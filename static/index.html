@@ -85,7 +85,7 @@
         function select_student() {
             var $spicker = $("#studentpicker");
             console.log($spicker.val());
-            $("#pdfdoc").attr('data', 'pdf/ex1_' + $spicker.val() + '.pdf');
+            $("#pdfdoc").attr('data', 'pdf/' + $spicker.val() + '.pdf');
 
             var $form = $("#gradingform");
             submit_form();

@@ -35,10 +35,10 @@ def find_valid_students(pdf_directory, pdf_regex):
         for pdf in listdir(pdf_directory):
             m = pdf_regex.match(pdf)
             if m:
-                yield m.group(1)
+                yield m.group(1), pdf
 
 
-def write_data(general, students, filename):
+def write_data(general, students, filename, filter_keys):
     tmpfile = tempfile.mktemp()
 
     with open(tmpfile, 'w') as f:
@@ -49,9 +49,9 @@ def write_data(general, students, filename):
         for student, data in students.items():
             print("Student:{}:{}".format(student, data['EmailSent']), file=f)
             for k,v in data.items():
-                if k.startswith("EmailSent"):
+                if k in filter_keys + ["EmailSent", "FileName"]:
                     continue
-                print("{}:{}:{}".format(k,str(v[0]) if v[0] is not None else "", v[1].replace("\r\n",r"\n")),file=f)
+                print("{}:{}:{}".format(k,str(v[0]) if v[0] is not None else "", v[1].replace("\r\n", r"\n")),file=f)
 
     if not filecmp.cmp(tmpfile, filename):
         shutil.move(filename, ".{}.{}".format(filename, datetime.datetime.now().isoformat()))
@@ -114,20 +114,21 @@ def poststudentdata(studentid):
                 points = None
             student_data[studentid][key] = (points, desc)
 
-    write_data(general_data, student_data, grading_data_file)
+    write_data(general_data, student_data, grading_data_file, [])
 
 @grader.route('/info')
 def getinfo():
     return general_data
     # return [general_data, student_data]
 
-@grader.route('/pdf/<filename>')
-def pdfpage(filename):
+@grader.route('/pdf/<studentid>.pdf')
+def pdfpage(studentid):
+    filename = student_data[studentid]['FileName']
     return static_file(filename, root=pdf_directory)
 
 @grader.route('/save')
 def save():
-    write_data(general_data, student_data, grading_data_file)
+    write_data(general_data, student_data, grading_data_file,[])
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='Start grading session')
@@ -143,6 +144,11 @@ if __name__ == "__main__":
 
     pdf_regex = (args.pdf_regex if args.pdf_regex is not None else "{}_([0-9A-Za-z]+).pdf$".format(pdf_directory))
 
-    general_data['StudentList'] = list(find_valid_students(pdf_directory, pdf_regex))
+    general_data['StudentList'] = []
+    for id, filename in find_valid_students(pdf_directory, pdf_regex):
+        general_data['StudentList'].append(id)
+        if id not in student_data:
+            student_data[id] = OrderedDict({'EmailSent': False})
+        student_data[id]['FileName'] = filename
 
     run(grader, host="0.0.0.0", port=8080)
