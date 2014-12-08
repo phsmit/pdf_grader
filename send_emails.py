@@ -10,7 +10,7 @@ from pdf_grader import read_data, write_data
 
 
 def get_connection(settings, user, password):
-    s = SMTP(settings['serversmtp'])
+    s = SMTP(settings['serversmtp'], 587)
     s.starttls()
     s.login(user, password)
     return s
@@ -76,7 +76,8 @@ def main(grading_file, email_file):
 
     for line in open(email_file):
         studentid, email, name = line.split(None, 2)
-        students[studentid]['EmailAddress'] = email
+        if studentid in students:
+            students[studentid]['EmailAddress'] = email
 
     for studentid, data in students.items():
         # m = create_message_body(general, data, studentid)
