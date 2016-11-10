@@ -2,7 +2,6 @@ from argparse import ArgumentParser
 import filecmp
 import datetime
 import shutil
-import os
 from os import listdir
 from collections import OrderedDict
 from bottle import Bottle, run, static_file, debug, request
@@ -47,9 +46,9 @@ def write_data(general, students, filename, filter_keys):
         print(",".join(str(i) if i is not None else "" for i in general['MaxPoints']), file=f)
 
         for student, data in students.items():
-            print("Student:{}:{}".format(student, data['EmailSent']), file=f)
+            print("Student:{}".format(student), file=f)
             for k,v in data.items():
-                if k in filter_keys + ["EmailSent", "FileName"]:
+                if k in filter_keys + ["FileName"]:
                     continue
                 print("{}:{}:{}".format(k,str(v[0]) if v[0] is not None else "", v[1].replace("\r\n", r"\n")),file=f)
 
@@ -75,8 +74,7 @@ def read_data(filename):
                 if student_id is not None:
                     students[student_id] = student_data
                     student_data = OrderedDict()
-                _, student_id, sent = line.strip().split(':')
-                student_data['EmailSent'] = (sent != "False")
+                _, student_id = line.strip().split(':',1)
             else:
                 question, points, description = line.strip().split(':', 2)
                 student_data[question] = (num(points) if len(points) > 0 else None, description.replace(r"\n", "\r\n"))
@@ -94,14 +92,14 @@ def indexpage():
 @grader.get('/student/<studentid>')
 def getstudentdata(studentid):
     if studentid not in student_data:
-        student_data[studentid] = OrderedDict({'EmailSent': False})
+        student_data[studentid] = OrderedDict()
 
     return student_data[studentid]
 
 @grader.post('/student/<studentid>')
 def poststudentdata(studentid):
     if studentid not in student_data:
-        student_data[studentid] = OrderedDict({'EmailSent': False})
+        student_data[studentid] = OrderedDict()
 
     for key in general_data['Questions']:
         points = request.forms.get('{}_points'.format(key), '').strip()
@@ -142,13 +140,13 @@ if __name__ == "__main__":
     general_data, student_data = read_data(args.grading_data_file)
     grading_data_file = args.grading_data_file
 
-    pdf_regex = (args.pdf_regex if args.pdf_regex is not None else "{}_([0-9A-Za-z]+).pdf$".format(pdf_directory))
+    pdf_regex = (args.pdf_regex if args.pdf_regex is not None else r"[^_]*_([0-9A-Za-z]+)_.*\.pdf$")
 
     general_data['StudentList'] = []
     for id, filename in find_valid_students(pdf_directory, pdf_regex):
         general_data['StudentList'].append(id)
         if id not in student_data:
-            student_data[id] = OrderedDict({'EmailSent': False})
+            student_data[id] = OrderedDict()
         student_data[id]['FileName'] = filename
 
     run(grader, host="0.0.0.0", port=8080)
