@@ -1,3 +1,4 @@
+import sys
 from argparse import ArgumentParser
 import csv
 import datetime
@@ -52,6 +53,8 @@ def main(grad_file, grade_workbook):
             for row in grade_reader:
                 if not " " in row[0] or row[0].split(" ", 1)[1] not in students:
                     grade_writer.writerow(row)
+                    if " " in row[0]:
+                        print("{} in workbook not found in students".format(row[0].split(" ", 1)[1]), file=sys.stderr)
                 else:
                     grade,feedback = create_description_grade(general, students[row[0].split(" ", 1)[1]])
                     row[5] = grade
