@@ -3,6 +3,7 @@ import filecmp
 import datetime
 import shutil
 from os import listdir
+from os.path import join, isdir
 from collections import OrderedDict
 from bottle import Bottle, run, static_file, debug, request
 import re
@@ -31,10 +32,14 @@ def num(s):
 def find_valid_students(pdf_directory, pdf_regex):
     if type(pdf_regex) == str:
         pdf_regex = re.compile(pdf_regex)
-        for pdf in listdir(pdf_directory):
-            m = pdf_regex.match(pdf)
-            if m:
-                yield m.group(1), pdf
+        for sdir in listdir(pdf_directory):
+            if not isdir(join(pdf_directory, sdir)):
+                continue
+            for pdfn in listdir(join(pdf_directory, sdir)):
+                pdf = join(sdir, pdfn)
+                m = pdf_regex.match(pdf)
+                if m:
+                    yield m.group(1), pdf
 
 
 def write_data(general, students, filename, filter_keys):
